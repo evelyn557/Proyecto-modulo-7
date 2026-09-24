@@ -5,7 +5,7 @@ from django.contrib.auth.mixins import (
 )
 from django.db.models import Count, Q
 from django.db.models.deletion import ProtectedError
-from django.shortcuts import redirect
+from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import (
     CreateView,
@@ -15,8 +15,8 @@ from django.views.generic import (
     UpdateView,
 )
 
-from .forms import ClienteForm
-from .models import Cliente, Cuenta
+from .forms import ClienteForm, TransaccionForm
+from .models import Cliente, Cuenta, Transaccion
 
 
 class AccesoPersonalMixin(
@@ -149,3 +149,27 @@ class ClienteDeleteView(AccesoPersonalMixin, DeleteView):
         )
 
         return respuesta
+
+
+class TransaccionCreateView(AccesoPersonalMixin, CreateView):
+    model = Transaccion
+    form_class = TransaccionForm
+    template_name = "gestion/form_cliente.html"
+
+    extra_context = {
+        "titulo": "Registrar Transacción",
+    }
+
+    def form_valid(self, form):
+        cuenta_id = self.kwargs.get('cuenta_id')
+        cuenta = get_object_or_404(Cuenta, pk=cuenta_id)
+        
+        form.instance.cuenta = cuenta
+        respuesta = super().form_valid(form)
+        
+        messages.success(self.request, "Transacción registrada correctamente.")
+        return respuesta
+
+    def get_success_url(self):
+        cuenta = self.object.cuenta
+        return reverse_lazy('detalle_cliente', kwargs={'pk': cuenta.cliente.pk})
